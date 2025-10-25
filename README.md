@@ -245,7 +245,7 @@ Theme state is stored in browser localStorage so the selected theme persists per
 
 Tausif Rahman  
 Assistant Professor – School of Computer Science, UPES Dehradun  
-LinkedIn: https://www.linkedin.com/in/tausifrahman  
+LinkedIn: [https://www.linkedin.com/in/tausifrahman ](https://www.linkedin.com/in/sk-tausif-rahman-75976455/) 
 GitHub: https://github.com/<your-username>
 
 ---
