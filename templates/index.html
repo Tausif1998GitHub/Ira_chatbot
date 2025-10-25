@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>💗 Ira Chats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --body-bg: #F3F4F6;
+      --user-bg: #BFDBFE;
+      --ai-bg: #FCE7F3;
+      --text-color: #111827;
+    }
+    body {
+      background: var(--body-bg);
+      color: var(--text-color);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    }
+  </style>
+</head>
+<body class="h-screen flex">
+  <aside class="w-72 bg-white border-r">
+    <div class="p-4">
+      <div class="flex items-center gap-2">
+        <div class="text-2xl">💗</div>
+        <h1 class="font-bold text-lg">Ira Chats</h1>
+      </div>
+      <button id="newChatBtn" class="mt-4 text-sm text-blue-600">+ New Chat</button>
+
+      <label class="block mt-4 text-xs text-gray-500">Theme</label>
+      <select id="themeSelect" class="mt-1 w-full border rounded p-1 text-sm">
+        <option value="light">🌤️ White</option>
+        <option value="dark">🌑 Black</option>
+        <option value="romantic">💖 Romantic</option>
+        <option value="fun">🎉 Fun</option>
+        <option value="relax">🌿 Relax/Calm</option>
+        <option value="nervous">⚡ Nervous</option>
+      </select>
+    </div>
+
+    <nav class="p-4">
+      <ul id="chatList" class="space-y-3">
+        {% for c in chats %}
+        <li>
+          <a href="/chat/{{c.chat_id}}?uid={{uid}}" class="block p-2 rounded hover:bg-pink-50">
+            <div class="font-medium text-gray-800">{{ c.title }}</div>
+            <div class="text-xs text-gray-500">Open</div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="flex-1 flex items-center justify-center">
+    <div class="text-gray-500">Select a chat from the left or create a new one.</div>
+  </main>
+
+<script>
+document.getElementById('newChatBtn').addEventListener('click', async () => {
+  const uid = new URLSearchParams(window.location.search).get('uid') || 'demo_user';
+  const resp = await fetch('/api/new_chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({uid})
+  });
+  const body = await resp.json();
+  if (body.chat_id) window.location.href = `/chat/${body.chat_id}?uid=${uid}`;
+});
+
+const themeSelect = document.getElementById('themeSelect');
+const themes = {
+  light:  { body:'#F3F4F6', user:'#BFDBFE', ai:'#FCE7F3', text:'#111827' },
+  dark:   { body:'#0F172A', user:'#1E293B', ai:'#334155', text:'#E5E7EB' },
+  romantic:{ body:'#FDF2F8', user:'#F9A8D4', ai:'#FBCFE8', text:'#111827' },
+  fun:    { body:'#FEF9C3', user:'#FDE68A', ai:'#BBF7D0', text:'#111827' },
+  relax:  { body:'#E0F2FE', user:'#A7F3D0', ai:'#BAE6FD', text:'#111827' },
+  nervous:{ body:'#F3E8FF', user:'#DDD6FE', ai:'#FECACA', text:'#111827' }
+};
+
+function applyTheme(name){
+  const t = themes[name] || themes.light;
+  document.documentElement.style.setProperty('--body-bg', t.body);
+  document.documentElement.style.setProperty('--user-bg', t.user);
+  document.documentElement.style.setProperty('--ai-bg', t.ai);
+  document.documentElement.style.setProperty('--text-color', t.text);
+  document.body.className = 'h-screen flex';
+  document.body.style.background = 'var(--body-bg)';
+  document.body.style.color = 'var(--text-color)';
+  localStorage.setItem('iraTheme', name);
+}
+themeSelect.addEventListener('change', ()=> applyTheme(themeSelect.value));
+window.addEventListener('load', ()=> {
+  const saved = localStorage.getItem('iraTheme') || 'light';
+  themeSelect.value = saved;
+  applyTheme(saved);
+});
+</script>
+</body>
+</html>

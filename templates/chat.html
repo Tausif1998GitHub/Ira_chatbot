@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ira Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --body-bg: #F3F4F6;
+      --user-bg: #BFDBFE;
+      --ai-bg: #FCE7F3;
+      --text-color: #111827;
+    }
+    body {
+      background: var(--body-bg);
+      color: var(--text-color);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    }
+    #chatBox { scrollbar-gutter: stable both-edges; }
+  </style>
+</head>
+<body class="h-screen flex">
+  <!-- Sidebar -->
+  <aside class="w-72 bg-white border-r">
+    <div class="p-4">
+      <div class="flex items-center gap-2">
+        <div class="text-2xl">💗</div>
+        <h1 class="font-bold text-lg">Ira Chats</h1>
+      </div>
+      <a id="newLink" href="#" class="mt-4 text-sm text-blue-600 block">+ New Chat</a>
+
+      <label class="block mt-4 text-xs text-gray-500">Theme</label>
+      <select id="themeSelect" class="mt-1 w-full border rounded p-1 text-sm">
+        <option value="light">🌤️ White</option>
+        <option value="dark">🌑 Black</option>
+        <option value="romantic">💖 Romantic</option>
+        <option value="fun">🎉 Fun</option>
+        <option value="relax">🌿 Relax/Calm</option>
+        <option value="nervous">⚡ Nervous</option>
+      </select>
+    </div>
+
+    <nav class="p-4">
+      <ul id="chatList" class="space-y-3">
+        {% for c in chats %}
+        <li>
+          <a href="/chat/{{c.chat_id}}?uid={{uid}}" class="block p-2 rounded hover:bg-pink-50 {% if c.chat_id == cid %}bg-pink-50{% endif %}">
+            <div class="font-medium text-gray-800">{{ c.title }}</div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Chat area -->
+  <div class="flex-1 flex flex-col">
+    <div id="chatBox" class="flex-1 overflow-y-auto p-6 space-y-4">
+      {% for m in history %}
+        {% if m.role == 'user' %}
+          <div class="flex justify-end">
+            <div class="px-4 py-2 rounded-lg inline-block max-w-[60%]" style="background:var(--user-bg);color:var(--text-color)">{{ m.content }}</div>
+          </div>
+        {% else %}
+          <div class="flex justify-start">
+            <div class="px-4 py-2 rounded-lg inline-block max-w-[60%]" style="background:var(--ai-bg);color:var(--text-color)">{{ m.content }}</div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <form id="chatForm" class="p-4 flex border-t bg-white">
+      <input id="msg" type="text" placeholder="Type something..." autocomplete="off"
+             class="flex-1 border rounded px-3 py-2" />
+      <button class="ml-2 px-4 py-2 bg-pink-500 text-white rounded">Send</button>
+    </form>
+  </div>
+
+<script>
+const uid = "{{ uid }}";
+const cid = "{{ cid }}";
+const chatBox = document.getElementById('chatBox');
+const form = document.getElementById('chatForm');
+const msgInput = document.getElementById('msg');
+const newLink = document.getElementById('newLink');
+const themeSelect = document.getElementById('themeSelect');
+
+const themes = {
+  light:  { body:'#F3F4F6', user:'#BFDBFE', ai:'#FCE7F3', text:'#111827' },
+  dark:   { body:'#0F172A', user:'#1E293B', ai:'#334155', text:'#E5E7EB' },
+  romantic:{ body:'#FDF2F8', user:'#F9A8D4', ai:'#FBCFE8', text:'#111827' },
+  fun:    { body:'#FEF9C3', user:'#FDE68A', ai:'#BBF7D0', text:'#111827' },
+  relax:  { body:'#E0F2FE', user:'#A7F3D0', ai:'#BAE6FD', text:'#111827' },
+  nervous:{ body:'#F3E8FF', user:'#DDD6FE', ai:'#FECACA', text:'#111827' }
+};
+
+function applyTheme(name){
+  const t = themes[name] || themes.light;
+  document.documentElement.style.setProperty('--body-bg', t.body);
+  document.documentElement.style.setProperty('--user-bg', t.user);
+  document.documentElement.style.setProperty('--ai-bg', t.ai);
+  document.documentElement.style.setProperty('--text-color', t.text);
+  document.body.className = 'h-screen flex';
+  document.body.style.background = 'var(--body-bg)';
+  document.body.style.color = 'var(--text-color)';
+  localStorage.setItem('iraTheme', name);
+}
+themeSelect.addEventListener('change', ()=> applyTheme(themeSelect.value));
+window.addEventListener('load', ()=> {
+  const saved = localStorage.getItem('iraTheme') || 'light';
+  themeSelect.value = saved;
+  applyTheme(saved);
+});
+
+newLink.addEventListener('click', async (ev) => {
+  ev.preventDefault();
+  const resp = await fetch('/api/new_chat', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({uid})
+  });
+  const body = await resp.json();
+  if (body.chat_id) window.location.href = `/chat/${body.chat_id}?uid=${uid}`;
+});
+
+const CPS = 40; 
+const MS_PER_CHAR = Math.round(1000 / CPS);
+
+function escapeHtml(unsafe) {
+  return unsafe.replaceAll('&', "&amp;")
+               .replaceAll('<', "&lt;")
+               .replaceAll('>', "&gt;")
+               .replaceAll('"', "&quot;")
+               .replaceAll("'", "&#039;");
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = msgInput.value.trim();
+  if (!text) return;
+
+  const theme = themes[localStorage.getItem('iraTheme') || 'light'];
+  const userBubble = document.createElement('div');
+  userBubble.className = 'flex justify-end';
+  userBubble.innerHTML = `<div class="px-4 py-2 rounded-lg inline-block max-w-[60%]" style="background:var(--user-bg);color:var(--text-color)">${escapeHtml(text)}</div>`;
+  chatBox.appendChild(userBubble);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  msgInput.value = '';
+  msgInput.disabled = true;
+
+  const aiContainer = document.createElement('div');
+  aiContainer.className = 'flex justify-start';
+  const aiSpan = document.createElement('div');
+  aiSpan.className = 'px-4 py-2 rounded-lg inline-block max-w-[60%]';
+  aiSpan.style.background = 'var(--ai-bg)';
+  aiSpan.style.color = 'var(--text-color)';
+  aiSpan.textContent = '…';
+  aiContainer.appendChild(aiSpan);
+  chatBox.appendChild(aiContainer);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  let dots = 1;
+  const typingInterval = setInterval(() => {
+    aiSpan.textContent = '.'.repeat(dots);
+    dots = dots < 3 ? dots + 1 : 1;
+  }, 350);
+
+  const resp = await fetch('/api/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ uid, chat_id: cid, message: text })
+  });
+
+  if (!resp.body) {
+    clearInterval(typingInterval);
+    aiSpan.textContent = "Sorry, no response.";
+    msgInput.disabled = false;
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let done = false;
+  let buffer = '';
+  let renderQueue = '';
+  let showing = '';
+  let gotFirst = false;
+  let revealActive = true;
+
+  async function revealLoop() {
+    while (revealActive) {
+      if (renderQueue.length > 0) {
+        showing += renderQueue[0];
+        renderQueue = renderQueue.slice(1);
+        aiSpan.textContent = showing;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        await new Promise(r => setTimeout(r, MS_PER_CHAR));
+      } else await new Promise(r => setTimeout(r, 50));
+    }
+  }
+  const revealPromise = revealLoop();
+
+  while (!done) {
+    const { value, done: doneReading } = await reader.read();
+    done = doneReading;
+    if (value) {
+      const chunk = decoder.decode(value);
+      buffer += chunk;
+      if (!gotFirst) {
+        gotFirst = true;
+        clearInterval(typingInterval);
+        showing = '';
+        aiSpan.textContent = '';
+      }
+      renderQueue += chunk;
+    }
+  }
+  while (renderQueue.length > 0) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 250));
+  revealActive = false;
+  await revealPromise;
+
+  aiSpan.textContent = showing || buffer;
+  chatBox.scrollTop = chatBox.scrollHeight;
+  msgInput.disabled = false;
+  msgInput.focus();
+});
+
+chatBox.scrollTop = chatBox.scrollHeight;
+</script>
+</body>
+</html>

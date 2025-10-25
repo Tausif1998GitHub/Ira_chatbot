@@ -1,0 +1,26 @@
+# --- Core Framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# --- Template Rendering & Form Handling ---
+jinja2==3.1.4
+python-multipart==0.0.9
+aiofiles==24.1.0  # for serving static files asynchronously
+
+# --- Environment Variables ---
+python-dotenv==1.0.1
+
+# --- Redis for Memory Persistence ---
+redis==5.0.8
+
+# --- Google Gemini (LLM Integration) ---
+google-generativeai==0.7.2
+
+# --- Language Detection ---
+langdetect==1.0.9
+
+# --- Data Validation & Models ---
+pydantic==2.9.2
+
+# --- Optional Utilities (recommended for development) ---
+httpx==0.27.0  # if you ever add API calls or external requests
